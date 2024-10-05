@@ -11,12 +11,13 @@
         #form { display: flex; }
         #input { flex: 1; padding: 10px; }
         #submit { padding: 10px; }
-        #username { padding: 10px; }
+        #login { margin-bottom: 20px; }
     </style>
 </head>
 <body>
-    <div>
-        <input id="username" placeholder="Enter your username" />
+    <div id="login">
+        <input id="login-username" placeholder="Enter your username" />
+        <button id="login-button">Login</button>
     </div>
     <ul id="messages"></ul>
     <form id="form" action="">
@@ -29,17 +30,16 @@
         const socket = io();
         const form = document.getElementById('form');
         const input = document.getElementById('input');
-        const usernameInput = document.getElementById('username');
+        const usernameInput = document.getElementById('login-username');
         const messages = document.getElementById('messages');
         let currentUser = '';
 
         document.getElementById('login-button').addEventListener('click', function() {
-            currentUser = document.getElementById('login-username').value || 'Anonymous';
+            currentUser = usernameInput.value || 'Anonymous';
             document.getElementById('login').style.display = 'none'; // Hide login
             socket.emit('user joined', currentUser); // Notify server of new user
         });
-        
-        // Existing message handling
+
         socket.on('chat history', function(chatMessages) {
             chatMessages.forEach(({ username, message }) => {
                 const item = document.createElement('li');
@@ -48,14 +48,22 @@
             });
             window.scrollTo(0, document.body.scrollHeight);
         });
-        
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault(); // Prevent page reload
+            if (input.value) {
+                socket.emit('chat message', { username: currentUser, message: input.value });
+                input.value = ''; // Clear input field
+            }
+        });
+
         socket.on('chat message', function({ username, message }) {
             const item = document.createElement('li');
             item.textContent = `${username}: ${message}`;
             messages.appendChild(item);
             window.scrollTo(0, document.body.scrollHeight);
         });
-        
+
         socket.on('user joined', function(username) {
             const notificationItem = document.createElement('li');
             notificationItem.textContent = `${username} has joined the chat!`;
