@@ -42,6 +42,22 @@ io.on('connection', (socket) => {
         io.emit('chat message', chatMessage); // Broadcast message to all
     });
 
+    socket.on('reply message', (data) => {
+        const replyMessage = {
+            username: data.username,
+            message: data.message,
+            replyTo: data.replyTo
+        };
+        chatMessages.push(replyMessage); // Store the reply message
+    
+        // Optionally limit stored chat messages
+        if (chatMessages.length > 1000) {
+            chatMessages.shift();
+        }
+    
+        io.emit('chat message', replyMessage); // Broadcast reply to all
+    });
+
     socket.on('disconnect', () => {
         console.log('User disconnected');
         delete activeUsers[socket.username]; // Remove user on disconnect
