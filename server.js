@@ -32,7 +32,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('chat message', (data) => {
-        const chatMessage = { username: data.username, message: data.message };
+        const chatMessage = { username: data.username, message: data.message, file: data.file };
         chatMessages.push(chatMessage); // Store message in global history
 
         // Optional: Limit stored chat messages to prevent memory overflow
