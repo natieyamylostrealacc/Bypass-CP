@@ -10,11 +10,15 @@ const io = socketIo(server);
 let chatMessages = []; // Store chat messages
 const activeUsers = {}; // Object to track active users and their messages
 
+// Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Route to serve index.html from the root directory
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// Handle WebSocket connections
 io.on('connection', (socket) => {
     console.log('A user connected');
 
@@ -26,14 +30,13 @@ io.on('connection', (socket) => {
         if (!activeUsers[username]) {
             activeUsers[username] = []; // Initialize user's message history
         }
-        socket.broadcast.emit('user joined', username);
+        socket.broadcast.emit('user joined', username); // Notify others
     });
 
-    socket.on('chat message', (message) => {
-        const chatMessage = { username: socket.username, message };
+    socket.on('chat message', (data) => {
+        const chatMessage = { username: data.username, message: data.message };
         chatMessages.push(chatMessage); // Store message in global history
-        activeUsers[socket.username].push(chatMessage); // Store in user's history
-        io.emit('chat message', chatMessage);
+        io.emit('chat message', chatMessage); // Broadcast message to all
     });
 
     socket.on('disconnect', () => {
