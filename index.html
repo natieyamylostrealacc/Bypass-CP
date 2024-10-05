@@ -43,6 +43,7 @@
         socket.on('chat history', function(chatMessages) {
             chatMessages.forEach(({ username, message }) => {
                 const item = document.createElement('li');
+                
                 item.textContent = `${username}: ${message}`;
                 messages.appendChild(item);
             });
