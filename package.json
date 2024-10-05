@@ -11,6 +11,6 @@
     "socket.io": "^4.0.0"
   },
   "engines": {
-    "node": "14.x" // Change this to your Node.js version
+    "node": "14.x"
   }
 }
