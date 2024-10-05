@@ -8,34 +8,37 @@ const server = http.createServer(app);
 const io = socketIo(server);
 
 let chatMessages = []; // Store chat messages
-const activeUsers = {}; // Object to track active users and their messages
+const activeUsers = {}; // Object to track active users
 
-// Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Route to serve index.html from the root directory
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Handle WebSocket connections
 io.on('connection', (socket) => {
     console.log('A user connected');
 
-    // Send existing messages to the new user
-    socket.emit('chat history', chatMessages);
-
     socket.on('user joined', (username) => {
-        socket.username = username; // Store the username in the socket
+        socket.username = username;
         if (!activeUsers[username]) {
-            activeUsers[username] = []; // Initialize user's message history
+            activeUsers[username] = [];
         }
+
+        // Send the last 50 messages to the new user
+        const recentMessages = chatMessages.slice(-50); // Limit to last 50 messages
+        socket.emit('chat history', recentMessages);
         socket.broadcast.emit('user joined', username); // Notify others
     });
 
     socket.on('chat message', (data) => {
         const chatMessage = { username: data.username, message: data.message };
         chatMessages.push(chatMessage); // Store message in global history
+
+        // Optional: Limit stored chat messages to prevent memory overflow
+        if (chatMessages.length > 1000) { // Adjust limit as needed
+            chatMessages.shift(); // Remove the oldest message
+        }
+
         io.emit('chat message', chatMessage); // Broadcast message to all
     });
 
