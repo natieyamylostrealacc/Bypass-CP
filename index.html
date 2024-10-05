@@ -11,6 +11,7 @@
         #form { display: flex; }
         #input { flex: 1; padding: 10px; }
         #submit { padding: 10px; }
+        #file-input { padding: 10px; }
         #login { margin-bottom: 20px; }
         #user-list { margin-top: 20px; }
     </style>
@@ -24,6 +25,7 @@
     <ul id="messages"></ul>
     <form id="form" action="">
         <input id="input" autocomplete="off" placeholder="Type your message..." />
+        <input type="file" id="file-input" />
         <button id="submit">Send</button>
     </form>
 
@@ -31,6 +33,8 @@
         <h3>Active Users</h3>
         <ul id="active-users"></ul>
     </div>
+
+    <audio id="message-sound" src="path/to/sound.mp3" preload="auto"></audio>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
@@ -40,6 +44,7 @@
         const usernameInput = document.getElementById('login-username');
         const messages = document.getElementById('messages');
         const userList = document.getElementById('active-users');
+        const messageSound = document.getElementById('message-sound');
         let currentUser = '';
 
         document.getElementById('login-button').addEventListener('click', function() {
@@ -49,9 +54,16 @@
         });
 
         socket.on('chat history', function(chatMessages) {
-            chatMessages.forEach(({ username, message }) => {
+            chatMessages.forEach(({ username, message, file }) => {
                 const item = document.createElement('li');
                 item.textContent = `${username}: ${message}`;
+                if (file) {
+                    const fileLink = document.createElement('a');
+                    fileLink.href = file;
+                    fileLink.textContent = ' (file)';
+                    fileLink.target = '_blank'; // Open in new tab
+                    item.appendChild(fileLink);
+                }
                 messages.appendChild(item);
             });
             window.scrollTo(0, document.body.scrollHeight);
@@ -59,9 +71,24 @@
 
         form.addEventListener('submit', function(e) {
             e.preventDefault(); // Prevent page reload
-            if (input.value) {
-                socket.emit('chat message', { username: currentUser, message: input.value });
+            if (input.value || document.getElementById('file-input').files.length > 0) {
+                const fileInput = document.getElementById('file-input');
+                const file = fileInput.files[0];
+                const messageData = { username: currentUser, message: input.value, file: null };
+
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        messageData.file = event.target.result; // Store the file data
+                        socket.emit('chat message', messageData);
+                    };
+                    reader.readAsDataURL(file); // Read the file as a data URL
+                } else {
+                    socket.emit('chat message', messageData);
+                }
+
                 input.value = ''; // Clear input field
+                fileInput.value = ''; // Clear file input
             }
         });
 
@@ -69,27 +96,16 @@
             const item = document.createElement('li');
             item.textContent = `${data.username}: ${data.message}`;
 
-            if (data.replyTo) {
-                const replyItem = document.createElement('li');
-                replyItem.textContent = `Replying to ${data.replyTo.username}: ${data.replyTo.message}`;
-                replyItem.style.marginLeft = '20px'; // Indent for replies
-                messages.appendChild(replyItem);
+            if (data.file) {
+                const fileLink = document.createElement('a');
+                fileLink.href = data.file;
+                fileLink.textContent = ' (file)';
+                fileLink.target = '_blank'; // Open in new tab
+                item.appendChild(fileLink);
             }
 
-            const replyButton = document.createElement('button');
-            replyButton.textContent = 'Reply';
-            replyButton.onclick = () => {
-                const replyContent = prompt('Type your reply:');
-                if (replyContent) {
-                    socket.emit('reply message', {
-                        username: currentUser,
-                        message: replyContent,
-                        replyTo: { username: data.username, message: data.message }
-                    });
-                }
-            };
-            item.appendChild(replyButton);
             messages.appendChild(item);
+            messageSound.play(); // Play sound on new message
             window.scrollTo(0, document.body.scrollHeight);
         });
 
