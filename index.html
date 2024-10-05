@@ -58,9 +58,32 @@
             }
         });
 
-        socket.on('chat message', function({ username, message }) {
+        socket.on('chat message', function(data) {
             const item = document.createElement('li');
-            item.textContent = `${username}: ${message}`;
+            item.textContent = `${data.username}: ${data.message}`;
+        
+            // If this message is a reply, display it accordingly
+            if (data.replyTo) {
+                const replyItem = document.createElement('li');
+                replyItem.textContent = `Replying to ${data.replyTo.username}: ${data.replyTo.message}`;
+                replyItem.style.marginLeft = '20px'; // Indent for replies
+                messages.appendChild(replyItem);
+            }
+        
+            // Add reply button
+            const replyButton = document.createElement('button');
+            replyButton.textContent = 'Reply';
+            replyButton.onclick = () => {
+                const replyContent = prompt('Type your reply:');
+                if (replyContent) {
+                    socket.emit('reply message', {
+                        username: currentUser,
+                        message: replyContent,
+                        replyTo: { username: data.username, message: data.message }
+                    });
+                }
+            };
+            item.appendChild(replyButton);
             messages.appendChild(item);
             window.scrollTo(0, document.body.scrollHeight);
         });
