@@ -20,14 +20,15 @@ io.on('connection', (socket) => {
 
     socket.on('user joined', (username) => {
         socket.username = username;
-        if (!activeUsers[username]) {
-            activeUsers[username] = [];
-        }
+        activeUsers[username] = true; // Track active user
 
         // Send the last 50 messages to the new user
         const recentMessages = chatMessages.slice(-50); // Limit to last 50 messages
         socket.emit('chat history', recentMessages);
         socket.broadcast.emit('user joined', username); // Notify others
+
+        // Send the updated user list
+        io.emit('update user list', Object.keys(activeUsers));
     });
 
     socket.on('chat message', (data) => {
@@ -35,7 +36,7 @@ io.on('connection', (socket) => {
         chatMessages.push(chatMessage); // Store message in global history
 
         // Optional: Limit stored chat messages to prevent memory overflow
-        if (chatMessages.length > 1000) { // Adjust limit as needed
+        if (chatMessages.length > 1000) {
             chatMessages.shift(); // Remove the oldest message
         }
 
@@ -49,18 +50,21 @@ io.on('connection', (socket) => {
             replyTo: data.replyTo
         };
         chatMessages.push(replyMessage); // Store the reply message
-    
+
         // Optionally limit stored chat messages
         if (chatMessages.length > 1000) {
             chatMessages.shift();
         }
-    
+
         io.emit('chat message', replyMessage); // Broadcast reply to all
     });
 
     socket.on('disconnect', () => {
         console.log('User disconnected');
         delete activeUsers[socket.username]; // Remove user on disconnect
+
+        // Update user list for all clients
+        io.emit('update user list', Object.keys(activeUsers));
     });
 });
 
